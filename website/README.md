@@ -43,6 +43,13 @@ Any static file server works. Rebuild after each change to `src/` or `site.confi
 
 ## Deploy
 
-The site is the contents of `website/dist/` after `node website/build.mjs`, so any static host works: GitHub Pages (`src/CNAME` is already set) or Azure Static Web Apps. There's no deploy workflow yet.
+The site is the contents of `website/dist/` after `node website/build.mjs`, so any static host works. It's set up for **Azure Static Web Apps**, like sergeantsamm.ie:
 
-The domain `getzapl.ie` is registered with Gandi and currently shows Gandi's placeholder page. Point its DNS at the host you choose, then turn on HTTPS there.
+1. In Azure, create a Static Web App on the Free plan, with **Other** as the deployment source (no build pipeline).
+2. Copy its deployment token (**Overview → Manage deployment token**) into this repository's secrets as `AZURE_STATIC_WEB_APPS_API_TOKEN`.
+3. Run the **Deploy** workflow (Actions → Deploy → Run workflow). From then on, every push to `main` builds and deploys the site (`.github/workflows/deploy.yml`).
+4. In the Static Web App's **Custom domains**, add `getzapl.ie` and `www.getzapl.ie`, and create the DNS records it asks for at Gandi (a TXT record to validate the apex and an ALIAS record pointing at the app; a CNAME for `www`).
+
+`getzapl.ie` is registered with Gandi and currently shows Gandi's placeholder page until its DNS points at the app.
+
+`src/CNAME` is only for GitHub Pages, if the site ever moves there; Azure ignores it.
