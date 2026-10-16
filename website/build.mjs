@@ -24,6 +24,7 @@ cpSync(src, dist, { recursive: true });
 const templated = new Set(['.html', '.css', '.js', '.xml', '.txt', '.webmanifest']);
 const missing = new Set();
 
+/** Replaces each {{placeholder}} in one file with its value, noting any that are unknown. */
 function fill(file) {
   const text = readFileSync(file, 'utf8');
   const out = text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => {
@@ -33,6 +34,7 @@ function fill(file) {
   writeFileSync(file, out);
 }
 
+/** Fills every templated file under a directory, recursively; font licences are left as they are. */
 function walk(dir) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);

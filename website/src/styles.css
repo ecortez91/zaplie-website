@@ -126,7 +126,10 @@ details p { margin: 12px 0 0; }
 .footer p { margin: 0 0 0 auto; }
 
 @media (max-width: 960px) {
-  .nav { display: none; }
+  html { scroll-padding-top: 116px; }
+  .top-row { flex-wrap: wrap; height: auto; padding-top: 12px; row-gap: 6px; }
+  .nav { order: 3; flex-basis: 100%; margin: 0 calc(var(--pad) * -1); padding: 4px var(--pad) 12px; gap: 22px; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .nav::-webkit-scrollbar { display: none; }
   .steps { grid-template-columns: 1fr; max-width: 520px; }
   .split, .meet .split { grid-template-columns: 1fr; gap: 36px; }
   .split-img { max-width: 420px; }
