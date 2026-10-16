@@ -1,0 +1,11 @@
+{
+  "mimeTypes": {
+    ".mp4": "video/mp4",
+    ".webp": "image/webp",
+    ".woff2": "font/woff2"
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  }
+}

@@ -13,6 +13,7 @@ The Zaplie website: one static page. Plain HTML and CSS, no framework, no JavaSc
 | `src/fonts/` | Mulish and Playfair Display (latin, WOFF2) from `@fontsource`, under the SIL Open Font Licence (licences alongside). |
 | `src/img/` | Zaplie's images, the app mockups, the explainer video and the social preview (see below). |
 | `src/CNAME` | `getzapl.ie`, for GitHub Pages. Harmless elsewhere. |
+| `src/staticwebapp.config.json` | Azure Static Web Apps settings: the right content type for the video, fonts and WebP images, plus two security headers. |
 
 ## Images
 
