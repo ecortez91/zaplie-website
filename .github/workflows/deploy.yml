@@ -31,7 +31,46 @@ jobs:
         with:
           node-version: 24
 
+      # The portal at /portal/ is the Teams tabs app from knowall-ai/zaplie-bot, built for
+      # that path. It needs the app registration's client id and tenant (public values, but
+      # kept as secrets so each environment sets its own) and the portal backend's URL.
+      # Without them the marketing page deploys on its own and /portal/ is absent.
+      - name: Check out the portal source
+        if: env.REACT_APP_AAD_CLIENT_ID != ''
+        env:
+          REACT_APP_AAD_CLIENT_ID: ${{ secrets.PORTAL_AAD_CLIENT_ID }}
+        uses: actions/checkout@v4
+        with:
+          repository: knowall-ai/zaplie-bot
+          ref: main
+          path: zaplie-bot
+
+      - name: Build the portal for /portal/
+        if: env.REACT_APP_AAD_CLIENT_ID != ''
+        working-directory: zaplie-bot/tabs
+        env:
+          CI: false
+          PUBLIC_URL: /portal
+          REACT_APP_AAD_CLIENT_ID: ${{ secrets.PORTAL_AAD_CLIENT_ID }}
+          REACT_APP_TENANT_ID: ${{ secrets.PORTAL_AAD_TENANT_ID }}
+          REACT_APP_API_BASE_URL: ${{ secrets.PORTAL_API_BASE_URL }}
+          REACT_APP_LNBITS_STORE_ID: ${{ secrets.PORTAL_LNBITS_STORE_ID }}
+          REACT_APP_LNBITS_STORE_OWNER_EMAIL: ${{ secrets.PORTAL_LNBITS_STORE_OWNER_EMAIL }}
+          REACT_APP_LNBITS_POINTS_LABEL: ${{ secrets.PORTAL_LNBITS_POINTS_LABEL }}
+        run: |
+          npm ci
+          npm run build
+          # CRA inlines REACT_APP_* values into the bundle: refuse one that names an LNbits credential.
+          if grep -RlE 'REACT_APP_LNBITS_(ADMINKEY|PASSWORD)|LNBITS_ADMINKEY|LNBITS_PASSWORD' build; then
+            echo '::error::The portal bundle references LNbits admin credentials'; exit 1
+          fi
+
+      - name: Test
+        run: node --test website/test/build.test.mjs
+
       - name: Build
+        env:
+          PORTAL_DIST: ${{ github.workspace }}/zaplie-bot/tabs/build
         run: node website/build.mjs
 
       - name: Deploy to Azure Static Web Apps

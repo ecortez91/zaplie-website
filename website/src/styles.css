@@ -48,7 +48,7 @@ code { font: 600 0.9em ui-monospace, SFMono-Regular, Consolas, monospace; color:
 .nav { display: flex; gap: 26px; margin-left: 12px; }
 .nav a { color: var(--soft); text-decoration: none; font-weight: 600; font-size: 0.95rem; }
 .nav a:hover { color: var(--text); }
-.top .btn { margin-left: auto; }
+.top-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 
 /* Buttons */
 .btn { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; background: var(--orange); color: #140b00; font-weight: 800; text-decoration: none; padding: 14px 24px; border-radius: 12px; border: 2px solid var(--orange); transition: background .15s, transform .15s; }
@@ -150,5 +150,7 @@ details p { margin: 12px 0 0; }
   .closing-row .cta { justify-content: center; }
   .closing-row img { width: 180px; }
   .footer p { margin: 0; }
-  .top .btn { padding: 8px 12px; }
+  .top-row { gap: 16px; }
+  .top .btn { padding: 8px 12px; gap: 6px; }
+  .top-actions { gap: 8px; }
 }

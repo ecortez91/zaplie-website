@@ -49,4 +49,28 @@ if (missing.size) {
   console.error(`Unknown placeholders: ${[...missing].join(', ')}`);
   process.exit(1);
 }
+
+// The Zaplie portal (Login, top right) is the signed-in part of the site, at /portal/. It is
+// the Teams tabs app from knowall-ai/zaplie-bot built for that path:
+//   cd zaplie-bot/tabs && PUBLIC_URL=/portal REACT_APP_API_BASE_URL=https://<portal backend> npm run build
+// PORTAL_DIST points at that build (default: a zaplie-bot checkout next to this repository).
+// Without it the marketing page still builds, and /portal/ is simply absent. It is copied after the
+// placeholders are filled: the portal is a finished build, and its bundle may legitimately contain
+// text that looks like a {{placeholder}}.
+const portal = process.env.PORTAL_DIST ?? join(root, '..', '..', 'zaplie-bot', 'tabs', 'build');
+const portalIndex = join(portal, 'index.html');
+if (existsSync(portalIndex)) {
+  // A build for the root of its own host would load its scripts from /static/, which
+  // does not exist here. Refuse it rather than publish a blank portal.
+  const html = readFileSync(portalIndex, 'utf8');
+  if (!/(src|href)="\/portal\//.test(html)) {
+    console.error(`The portal build at ${portal} is not built for /portal/: rebuild it with PUBLIC_URL=/portal.`);
+    process.exit(1);
+  }
+  cpSync(portal, join(dist, 'portal'), { recursive: true });
+  console.log(`Portal included from ${portal}`);
+} else {
+  console.warn(`Portal not included: no build at ${portal} (set PORTAL_DIST, or build zaplie-bot/tabs with PUBLIC_URL=/portal).`);
+}
+
 console.log(`Built ${dist}`);

@@ -1,6 +1,6 @@
 # getzapl.ie
 
-The Zaplie website: one static page. Plain HTML and CSS, no framework, no JavaScript, no third-party requests (the fonts are self-hosted). It follows the layout of the Wardie site ([getward.ie](https://getward.ie)).
+The Zaplie website: one static page in plain HTML and CSS, no framework, no JavaScript, no third-party requests (the fonts are self-hosted), plus the signed-in Zaplie portal at `/portal/` (a React app built from [knowall-ai/zaplie-bot](https://github.com/knowall-ai/zaplie-bot), see below). It follows the layout of the Wardie site ([getward.ie](https://getward.ie)).
 
 ## Layout
 
@@ -13,7 +13,38 @@ The Zaplie website: one static page. Plain HTML and CSS, no framework, no JavaSc
 | `src/fonts/` | Mulish and Playfair Display (latin, WOFF2) from `@fontsource`, under the SIL Open Font Licence (licences alongside). |
 | `src/img/` | Zaplie's images, the app mockups, the explainer video and the social preview (see below). |
 | `src/CNAME` | `getzapl.ie`, for GitHub Pages. Harmless elsewhere. |
-| `src/staticwebapp.config.json` | Azure Static Web Apps settings: the right content type for the video, fonts and WebP images, plus two security headers. |
+| `src/staticwebapp.config.json` | Azure Static Web Apps settings: the right content type for the video, fonts and WebP images, two security headers, and the fallback that serves the portal for `/portal/*` (see below). |
+| `test/build.test.mjs` | `node --test website/test/build.test.mjs`: builds a copy of the site and checks the Login button, the placeholders, the Static Web Apps settings and the portal copy. No dependencies. |
+
+## The Zaplie portal at /portal/
+
+**Login** (top right) opens the Zaplie portal at `/portal/`. The portal is the same React app the Microsoft Teams tabs use (`tabs/` in [knowall-ai/zaplie-bot](https://github.com/knowall-ai/zaplie-bot)), built once more for this path. In a normal browser it shows its own header and footer; inside Teams they stay hidden. One site, one deployment:
+
+```bash
+# in a zaplie-bot checkout
+cd tabs && npm ci
+PUBLIC_URL=/portal \
+REACT_APP_AAD_CLIENT_ID=<app registration client id> \
+REACT_APP_TENANT_ID=<tenant id> \
+REACT_APP_API_BASE_URL=https://<portal backend host> \
+npm run build                    # builds tabs/build for /portal/
+
+# back here
+node website/build.mjs           # copies it into website/dist/portal
+```
+
+`build.mjs` looks for the portal build in a `zaplie-bot` checkout next to this repository (`../zaplie-bot/tabs/build`); `PORTAL_DIST=/path/to/tabs/build node website/build.mjs` points it elsewhere. Without a build the marketing page still builds, with a warning, and `/portal/` is absent. A build made for the root of its own host (no `PUBLIC_URL`) is refused, as its scripts would not load from `/portal/`.
+
+What the portal needs, and why:
+
+- `PUBLIC_URL=/portal` sets the base path: asset URLs, the router and the Microsoft sign-in redirect (`https://getzapl.ie/portal` and `https://getzapl.ie/portal/auth-end`).
+- `REACT_APP_API_BASE_URL` is the Express backend the portal talks to (the zaplie-bot App Service, which serves `/api/*` and the LNbits gateway). The Static Web App serves files only, so the portal here calls that backend across origins; it allows that already (`cors()`).
+- `REACT_APP_AAD_CLIENT_ID` and `REACT_APP_TENANT_ID` are the app registration the Teams app uses. They are public identifiers, not secrets. **The app registration must list** `https://getzapl.ie/portal`, `https://getzapl.ie/portal/auth-end`, `https://www.getzapl.ie/portal` and `https://www.getzapl.ie/portal/auth-end` as single-page application redirect URIs.
+- Never put an LNbits key or password in a `REACT_APP_*` variable: Create React App inlines them into the public bundle. The deploy workflow refuses a bundle that names one.
+
+The deploy workflow builds the portal when the repository secret `PORTAL_AAD_CLIENT_ID` is set (with `PORTAL_AAD_TENANT_ID`, `PORTAL_API_BASE_URL`, and the optional `PORTAL_LNBITS_STORE_ID`, `PORTAL_LNBITS_STORE_OWNER_EMAIL`, `PORTAL_LNBITS_POINTS_LABEL`), and deploys the marketing page alone until then.
+
+`staticwebapp.config.json` has a `navigationFallback` to `/portal/index.html`, so a refresh on `/portal/feed` or a sign-in landing on `/portal/auth-end` loads the app; the portal's `static/` bundle, the site's images, fonts and other files are excluded, so a missing file is still a 404. Static Web Apps has one fallback for the whole site, so an unknown path on the marketing page (there is only one page) also lands in the portal, which sends it to its login.
 
 ## Images
 
