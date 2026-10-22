@@ -34,6 +34,8 @@ npm run build                    # builds tabs/build for /portal/
 node website/build.mjs           # copies it into website/dist/portal
 ```
 
+The portal source must support being served from `/portal/` (`tabs/src/services/appLocation.ts`, added by [knowall-ai/zaplie-bot PR 488](https://github.com/knowall-ai/zaplie-bot/pull/488)). The deploy workflow builds it from zaplie-bot's `main` and stops with an error if that support isn't there yet, or if `PORTAL_AAD_CLIENT_ID` is set without `PORTAL_AAD_TENANT_ID` and `PORTAL_API_BASE_URL`.
+
 `build.mjs` looks for the portal build in a `zaplie-bot` checkout next to this repository (`../zaplie-bot/tabs/build`); `PORTAL_DIST=/path/to/tabs/build node website/build.mjs` points it elsewhere. Without a build the marketing page still builds, with a warning, and `/portal/` is a short page (`src/portal-unavailable.html`) saying the portal is not on this site yet, so Login never leads to a 404. A build made for the root of its own host (no `PUBLIC_URL`) is refused, as its scripts would not load from `/portal/`.
 
 What the portal needs, and why:

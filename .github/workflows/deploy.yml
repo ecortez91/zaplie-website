@@ -45,6 +45,23 @@ jobs:
           ref: main
           path: zaplie-bot
 
+      # Fail rather than ship a broken portal: every required setting must be present, and the
+      # zaplie-bot source must already support serving the portal from /portal/
+      # (tabs/src/services/appLocation.ts, from knowall-ai/zaplie-bot PR 488).
+      - name: Check the portal can be built for /portal/
+        if: env.REACT_APP_AAD_CLIENT_ID != ''
+        env:
+          REACT_APP_AAD_CLIENT_ID: ${{ secrets.PORTAL_AAD_CLIENT_ID }}
+          REACT_APP_TENANT_ID: ${{ secrets.PORTAL_AAD_TENANT_ID }}
+          REACT_APP_API_BASE_URL: ${{ secrets.PORTAL_API_BASE_URL }}
+        run: |
+          if [ -z "$REACT_APP_TENANT_ID" ] || [ -z "$REACT_APP_API_BASE_URL" ]; then
+            echo '::error::PORTAL_AAD_CLIENT_ID is set, but PORTAL_AAD_TENANT_ID or PORTAL_API_BASE_URL is empty'; exit 1
+          fi
+          if [ ! -f zaplie-bot/tabs/src/services/appLocation.ts ]; then
+            echo '::error::zaplie-bot main cannot serve the portal from /portal/ yet (needs knowall-ai/zaplie-bot PR 488)'; exit 1
+          fi
+
       - name: Build the portal for /portal/
         if: env.REACT_APP_AAD_CLIENT_ID != ''
         working-directory: zaplie-bot/tabs
@@ -60,7 +77,8 @@ jobs:
         run: |
           npm ci
           npm run build
-          # CRA inlines REACT_APP_* values into the bundle: refuse one that names an LNbits credential.
+          # A browser bundle must never be wired to LNbits admin credentials: refuse one whose code
+          # names those settings. (This catches the settings being wired in, not a leaked value.)
           if grep -RlE 'REACT_APP_LNBITS_(ADMINKEY|PASSWORD)|LNBITS_ADMINKEY|LNBITS_PASSWORD' build; then
             echo '::error::The portal bundle references LNbits admin credentials'; exit 1
           fi
