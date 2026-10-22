@@ -2,7 +2,7 @@
 // Builds getzapl.ie: copies src/ to dist/ and fills {{placeholders}} in HTML, CSS and JS
 // from site.config.json (contact addresses and links live there, once).
 // No dependencies. Run: node website/build.mjs
-import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,18 +19,22 @@ const values = {
 };
 
 if (existsSync(dist)) rmSync(dist, { recursive: true });
-cpSync(src, dist, { recursive: true });
+cpSync(src, dist, { recursive: true, filter: (p) => !p.endsWith('portal-unavailable.html') });
 
 const templated = new Set(['.html', '.css', '.js', '.xml', '.txt', '.webmanifest']);
 const missing = new Set();
 
-/** Replaces each {{placeholder}} in one file with its value, noting any that are unknown. */
-function fill(file) {
+/**
+ * Replaces each {{placeholder}} in one file with its value, noting any that are unknown.
+ * Writes the result back, or returns it when `asText` is set (for a file kept outside dist/).
+ */
+function fill(file, asText = false) {
   const text = readFileSync(file, 'utf8');
   const out = text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => {
     if (!(key in values)) missing.add(key);
     return values[key] ?? '';
   });
+  if (asText) return out;
   writeFileSync(file, out);
 }
 
@@ -60,17 +64,28 @@ if (missing.size) {
 const portal = process.env.PORTAL_DIST ?? join(root, '..', '..', 'zaplie-bot', 'tabs', 'build');
 const portalIndex = join(portal, 'index.html');
 if (existsSync(portalIndex)) {
-  // A build for the root of its own host would load its scripts from /static/, which
-  // does not exist here. Refuse it rather than publish a blank portal.
+  // A build for the root of its own host loads its scripts from /static/, which does not
+  // exist here, and a mixed build would be blank too. Every root-relative URL in the
+  // portal's index must be under /portal/; refuse anything else rather than publish it.
   const html = readFileSync(portalIndex, 'utf8');
-  if (!/(src|href)="\/portal\//.test(html)) {
-    console.error(`The portal build at ${portal} is not built for /portal/: rebuild it with PUBLIC_URL=/portal.`);
+  const rootRelative = [...html.matchAll(/\s(?:src|href)="(\/[^"]*)"/g)].map((m) => m[1]);
+  const outside = rootRelative.filter((url) => url !== '/portal/' && !url.startsWith('/portal/'));
+  if (rootRelative.length === 0 || outside.length > 0) {
+    console.error(
+      `The portal build at ${portal} is not built for /portal/: rebuild it with PUBLIC_URL=/portal.` +
+        (outside.length ? ` Found: ${outside.join(', ')}` : ''),
+    );
     process.exit(1);
   }
   cpSync(portal, join(dist, 'portal'), { recursive: true });
   console.log(`Portal included from ${portal}`);
 } else {
-  console.warn(`Portal not included: no build at ${portal} (set PORTAL_DIST, or build zaplie-bot/tabs with PUBLIC_URL=/portal).`);
+  // Login still has somewhere to go: a short page saying the portal is not on this site
+  // yet, instead of a 404 (the Static Web App's fallback would otherwise have nothing to
+  // serve for /portal/ either).
+  mkdirSync(join(dist, 'portal'), { recursive: true });
+  writeFileSync(join(dist, 'portal', 'index.html'), fill(join(src, 'portal-unavailable.html'), true));
+  console.warn(`Portal not included: no build at ${portal} (set PORTAL_DIST, or build zaplie-bot/tabs with PUBLIC_URL=/portal). /portal/ says so.`);
 }
 
 console.log(`Built ${dist}`);

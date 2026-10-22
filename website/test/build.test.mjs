@@ -27,10 +27,10 @@ const buildCopy = (env = {}) => {
 // A real bundle can contain text shaped like a {{placeholder}}; the build must leave it alone.
 const PORTAL_SCRIPT = 'const t = "{{count}} zaps";';
 
-const fakePortal = (dir, scriptSrc) => {
+const fakePortal = (dir, scriptSrc, iconHref = '/portal/favicon.ico') => {
   const portal = join(dir, 'portal-build');
   mkdirSync(join(portal, 'static', 'js'), { recursive: true });
-  writeFileSync(join(portal, 'index.html'), `<!doctype html><html><head><script defer="defer" src="${scriptSrc}"></script></head><body><div id="root"></div></body></html>`);
+  writeFileSync(join(portal, 'index.html'), `<!doctype html><html><head><link rel="icon" href="${iconHref}"/><script defer="defer" src="${scriptSrc}"></script></head><body><div id="root"></div></body></html>`);
   writeFileSync(join(portal, 'static', 'js', 'main.js'), PORTAL_SCRIPT);
   return portal;
 };
@@ -61,11 +61,15 @@ test('staticwebapp.config.json falls back to the portal for /portal/* and still 
   assert.equal(swa.globalHeaders['X-Content-Type-Options'], 'nosniff');
 });
 
-test('the marketing page builds without a portal, with a warning', (t) => {
+test('without a portal build, /portal/ says so instead of 404ing', (t) => {
   const { dir, dist, output } = buildCopy();
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  assert.equal(existsSync(join(dist, 'portal')), false);
   assert.ok(existsSync(join(dist, 'index.html')));
+  const page = readFileSync(join(dist, 'portal', 'index.html'), 'utf8');
+  assert.match(page, /isn't on this site yet/);
+  assert.match(page, /mailto:support@knowall\.ai/, 'the support address is filled in');
+  assert.doesNotMatch(page, /\{\{\s*\w+\s*\}\}/);
+  assert.equal(existsSync(join(dist, 'portal-unavailable.html')), false, 'the template is not published on its own');
   assert.match(output + '', /Built /);
 });
 
@@ -83,5 +87,19 @@ test('a portal built for the root is refused', (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'getzaplie-portal-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const portal = fakePortal(dir, '/static/js/main.js');
+  assert.throws(() => buildCopy({ PORTAL_DIST: portal }), /not built for \/portal\//);
+});
+
+test('a portal with one asset outside /portal/ is refused too', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'getzaplie-portal-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const portal = fakePortal(dir, '/static/js/main.js', '/portal/favicon.ico');
+  assert.throws(() => buildCopy({ PORTAL_DIST: portal }), /not built for \/portal\/.*\/static\/js\/main\.js/);
+});
+
+test('a portal whose index has no root-relative URL at all is refused', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'getzaplie-portal-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const portal = fakePortal(dir, 'static/js/main.js', 'favicon.ico');
   assert.throws(() => buildCopy({ PORTAL_DIST: portal }), /not built for \/portal\//);
 });

@@ -14,6 +14,7 @@ The Zaplie website: one static page in plain HTML and CSS, no framework, no Java
 | `src/img/` | Zaplie's images, the app mockups, the explainer video and the social preview (see below). |
 | `src/CNAME` | `getzapl.ie`, for GitHub Pages. Harmless elsewhere. |
 | `src/staticwebapp.config.json` | Azure Static Web Apps settings: the right content type for the video, fonts and WebP images, two security headers, and the fallback that serves the portal for `/portal/*` (see below). |
+| `src/portal-unavailable.html` | What `/portal/` shows when the site is built without a portal (see below). Not published on its own. |
 | `test/build.test.mjs` | `node --test website/test/build.test.mjs`: builds a copy of the site and checks the Login button, the placeholders, the Static Web Apps settings and the portal copy. No dependencies. |
 
 ## The Zaplie portal at /portal/
@@ -33,7 +34,7 @@ npm run build                    # builds tabs/build for /portal/
 node website/build.mjs           # copies it into website/dist/portal
 ```
 
-`build.mjs` looks for the portal build in a `zaplie-bot` checkout next to this repository (`../zaplie-bot/tabs/build`); `PORTAL_DIST=/path/to/tabs/build node website/build.mjs` points it elsewhere. Without a build the marketing page still builds, with a warning, and `/portal/` is absent. A build made for the root of its own host (no `PUBLIC_URL`) is refused, as its scripts would not load from `/portal/`.
+`build.mjs` looks for the portal build in a `zaplie-bot` checkout next to this repository (`../zaplie-bot/tabs/build`); `PORTAL_DIST=/path/to/tabs/build node website/build.mjs` points it elsewhere. Without a build the marketing page still builds, with a warning, and `/portal/` is a short page (`src/portal-unavailable.html`) saying the portal is not on this site yet, so Login never leads to a 404. A build made for the root of its own host (no `PUBLIC_URL`) is refused, as its scripts would not load from `/portal/`.
 
 What the portal needs, and why:
 
